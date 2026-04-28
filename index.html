@@ -324,12 +324,16 @@ body{
 }
 .pav-chip:active{cursor:grabbing}
 .pav-chip:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,0.3)}
-.pav-chip.cpn{background:rgba(74,159,212,0.18);color:#7cc3e8;border:1px solid rgba(74,159,212,0.25)}
-.pav-chip.sjk{background:rgba(62,207,178,0.18);color:#6ddfc8;border:1px solid rgba(62,207,178,0.25)}
+.pav-chip.cpn{background:#5BAEE2;color:#ffffff;border:1px solid #4a9fd4}
+.pav-chip.sjk{background:#60C0BF;color:#ffffff;border:1px solid #4aafae}
 .pav-chip.dragging{opacity:0.4;transform:scale(0.97)}
+body.dark .pav-chip.cpn{background:rgba(91,174,226,0.22);color:#a8d8f0;border:1px solid rgba(91,174,226,0.35)}
+body.dark .pav-chip.sjk{background:rgba(96,192,191,0.22);color:#a0dede;border:1px solid rgba(96,192,191,0.35)}
+body.dark .fin-base-badge.cpn{background:rgba(91,174,226,0.25);color:#a8d8f0}
+body.dark .fin-base-badge.sjk{background:rgba(96,192,191,0.25);color:#a0dede}
 .chip-base{
   font-size:9px;font-weight:700;letter-spacing:0.5px;
-  opacity:0.7;text-transform:uppercase;
+  opacity:0.85;text-transform:uppercase;
 }
 .chip-name{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:11px}
 .chip-edit{
@@ -407,8 +411,8 @@ body{
   display:inline-block;font-size:10px;font-weight:700;
   letter-spacing:0.5px;padding:3px 8px;border-radius:4px;
 }
-.fin-base-badge.cpn{background:rgba(74,159,212,0.2);color:#7cc3e8}
-.fin-base-badge.sjk{background:rgba(62,207,178,0.2);color:#6ddfc8}
+.fin-base-badge.cpn{background:#5BAEE2;color:#ffffff}
+.fin-base-badge.sjk{background:#60C0BF;color:#ffffff}
 .fin-valor{
   font-family:var(--font-head);font-size:14px;font-weight:700;
   color:var(--teal);
@@ -1018,8 +1022,8 @@ async function carregarEscala() {
 }
 
 function popularSelects() {
-  const cpns = state.pavs.filter(p => p.Base === 'CPN' && p.Status === 'Ativo');
-  const sjks = state.pavs.filter(p => p.Base === 'SJK' && p.Status === 'Ativo');
+  const cpns = state.pavs.filter(p => p.Base === 'CPN' && p.Status === 'Ativo').sort((a,b) => a['Nome Completo'].localeCompare(b['Nome Completo']));
+  const sjks = state.pavs.filter(p => p.Base === 'SJK' && p.Status === 'Ativo').sort((a,b) => a['Nome Completo'].localeCompare(b['Nome Completo']));
 
   function fillSelect(id, list) {
     const sel = document.getElementById(id);
@@ -1485,6 +1489,31 @@ document.getElementById('modalPAVConfirm').addEventListener('click', async () =>
     }
   }
 })();
+
+// ─── MÁSCARAS ────────────────────────────────────────────────
+function mascaraCPF(v) {
+  v = v.replace(/\D/g,'').slice(0,11);
+  if (v.length > 9) return v.replace(/(\d{3})(\d{3})(\d{3})(\d{1,2})/,'$1.$2.$3-$4');
+  if (v.length > 6) return v.replace(/(\d{3})(\d{3})(\d{1,3})/,'$1.$2.$3');
+  if (v.length > 3) return v.replace(/(\d{3})(\d{1,3})/,'$1.$2');
+  return v;
+}
+function mascaraTel(v) {
+  v = v.replace(/\D/g,'').slice(0,11);
+  if (v.length === 11) return v.replace(/(\d{2})(\d{5})(\d{4})/,'($1) $2-$3');
+  if (v.length === 10) return v.replace(/(\d{2})(\d{4})(\d{4})/,'($1) $2-$3');
+  if (v.length > 6)   return v.replace(/(\d{2})(\d{4,5})(\d{0,4})/,'($1) $2-$3');
+  if (v.length > 2)   return v.replace(/(\d{2})(\d+)/,'($1) $2');
+  return v;
+}
+
+document.getElementById('pavCPF').addEventListener('input', function() {
+  const pos = this.selectionStart;
+  this.value = mascaraCPF(this.value);
+});
+document.getElementById('pavTel').addEventListener('input', function() {
+  this.value = mascaraTel(this.value);
+});
 
 // Fechar modais clicando fora
 document.querySelectorAll('.modal-overlay').forEach(overlay => {
