@@ -674,6 +674,7 @@ body.dark select.field-input{background-image:url("data:image/svg+xml,%3Csvg xml
           <div class="legend-item"><div class="legend-dot sjk"></div>SJK</div>
         </div>
         <div class="cal-actions admin-only">
+          <button class="btn-action" id="btnReplicarMes" title="Copia o padrão semanal do mês anterior">📋 Replicar mês anterior</button>
           <button class="btn-action" id="btnEscalarSemana">⚡ Escalar por dia da semana</button>
           <button class="btn-action primary" id="btnSalvarEscala">💾 Salvar escala</button>
         </div>
@@ -735,9 +736,25 @@ body.dark select.field-input{background-image:url("data:image/svg+xml,%3Csvg xml
   <div class="screen admin-only" id="viewCadastro" style="display:none">
     <div class="cad-header">
       <div class="cad-title">Cadastro de PAVs</div>
-      <button class="btn-action primary" id="btnNovoPAV">+ Novo PAV</button>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+        <button class="btn-action" id="btnVerInativos" style="font-size:12px">👁 Ver inativos</button>
+        <button class="btn-action primary" id="btnNovoPAV">+ Novo PAV</button>
+      </div>
+    </div>
+    <div style="margin-bottom:20px;display:flex;gap:8px">
+      <button class="tab-btn active" data-base="todos" id="filterTodos">Todos</button>
+      <button class="tab-btn" data-base="CPN" id="filterCPN">CPN</button>
+      <button class="tab-btn" data-base="SJK" id="filterSJK">SJK</button>
     </div>
     <div class="pavs-grid" id="pavsGrid"></div>
+    <!-- Seção inativos -->
+    <div id="inativosSection" style="display:none;margin-top:32px">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+        <div style="font-family:var(--font-head);font-size:16px;font-weight:700;color:var(--muted)">PAVs Inativos</div>
+        <div style="flex:1;height:1px;background:var(--border)"></div>
+      </div>
+      <div class="pavs-grid" id="pavsGridInativos"></div>
+    </div>
   </div>
 
 </div><!-- /appScreen -->
@@ -1119,7 +1136,7 @@ function criarChip(base, id, nome, dataStr) {
     const empty = document.createElement('div');
     empty.className = 'pav-empty';
     empty.textContent = `+ ${base}`;
-    empty.addEventListener('click', () => abrirModalDia(dataStr));
+    empty.addEventListener('click', () => abrirModalDia(dataStr, base));
     return empty;
   }
   const chip = document.createElement('div');
@@ -1196,6 +1213,53 @@ function moverPAV(payload, toData) {
   toast('PAV movido · Lembre de salvar!', 'success');
 }
 
+// REPLICAR MÊS ANTERIOR
+document.getElementById('btnReplicarMes')?.addEventListener('click', () => {
+  const mesAtual = state.mesAtual;
+  const anoAtual = mesAtual.getFullYear();
+  const mesIdx   = mesAtual.getMonth();
+
+  // Mês anterior
+  const mesAntDate  = new Date(anoAtual, mesIdx - 1, 1);
+  const mesAntStr   = mesAntDate.getFullYear() + '-' + String(mesAntDate.getMonth() + 1).padStart(2,'0');
+
+  // Coletar escala do mês anterior
+  const escalaMesAnt = {};
+  Object.entries({...state.escala, ...state.escalaEditada}).forEach(([data, v]) => {
+    if (data.startsWith(mesAntStr)) {
+      const dow = new Date(data + 'T12:00:00').getDay();
+      // Guarda o último valor para cada dia da semana
+      escalaMesAnt[dow] = v;
+    }
+  });
+
+  if (Object.keys(escalaMesAnt).length === 0) {
+    toast('Nenhuma escala encontrada no mês anterior', 'error'); return;
+  }
+
+  // Aplicar padrão no mês atual
+  const diasNoMes = new Date(anoAtual, mesIdx + 1, 0).getDate();
+  let count = 0;
+  for (let d = 1; d <= diasNoMes; d++) {
+    const date = new Date(anoAtual, mesIdx, d);
+    const dow  = date.getDay();
+    if (!escalaMesAnt[dow]) continue;
+    const dataStr = date.toISOString().split('T')[0];
+    const atual   = state.escalaEditada[dataStr] || state.escala[dataStr] || {};
+    const padrão  = escalaMesAnt[dow];
+    state.escalaEditada[dataStr] = {
+      cpn_id:   padrão.cpn_id   || atual.cpn_id   || '',
+      cpn_nome: padrão.cpn_nome || atual.cpn_nome || '',
+      sjk_id:   padrão.sjk_id   || atual.sjk_id   || '',
+      sjk_nome: padrão.sjk_nome || atual.sjk_nome || '',
+    };
+    count++;
+  }
+
+  renderCalendario();
+  toast(`${count} dias replicados do mês anterior · Salve para confirmar!`);
+});
+
 // NAV MESES
 document.getElementById('btnPrevMes').addEventListener('click', () => {
   state.mesAtual = new Date(state.mesAtual.getFullYear(), state.mesAtual.getMonth() - 1, 1);
@@ -1243,9 +1307,11 @@ document.getElementById('btnSalvarEscala')?.addEventListener('click', async () =
 
 // ─── MODAL DIA ────────────────────────────────────────────────
 let modalDiaData = null;
+let modalDiaBase = null;
 
-function abrirModalDia(dataStr) {
+function abrirModalDia(dataStr, base = null) {
   modalDiaData = dataStr;
+  modalDiaBase = base;
   const d = new Date(dataStr + 'T12:00:00');
   document.getElementById('modalDiaTitle').textContent =
     d.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
@@ -1254,14 +1320,25 @@ function abrirModalDia(dataStr) {
   document.getElementById('selCPN').value = esc?.cpn_id || '';
   document.getElementById('selSJK').value = esc?.sjk_id || '';
 
+  // Mostrar só campos relevantes
+  const rowCPN = document.getElementById('selCPN').closest('.field-group');
+  const rowSJK = document.getElementById('selSJK').closest('.field-group');
+  if (base === 'CPN') { rowCPN.style.display=''; rowSJK.style.display='none'; }
+  else if (base === 'SJK') { rowCPN.style.display='none'; rowSJK.style.display=''; }
+  else { rowCPN.style.display=''; rowSJK.style.display=''; }
+
   document.getElementById('modalDia').classList.add('open');
 }
 
 document.getElementById('modalDiaCancel').addEventListener('click', () => {
   document.getElementById('modalDia').classList.remove('open');
+  document.getElementById('selCPN').closest('.field-group').style.display='';
+  document.getElementById('selSJK').closest('.field-group').style.display='';
 });
 
 document.getElementById('modalDiaConfirm').addEventListener('click', () => {
+  document.getElementById('selCPN').closest('.field-group').style.display='';
+  document.getElementById('selSJK').closest('.field-group').style.display='';
   const cpnId = document.getElementById('selCPN').value;
   const sjkId = document.getElementById('selSJK').value;
   const cpnPAV = state.pavs.find(p => String(p.ID) === String(cpnId));
@@ -1376,39 +1453,76 @@ async function carregarFinanceiro() {
 }
 
 // ─── CADASTRO PAV ─────────────────────────────────────────────
+let cadFiltroBase = 'todos';
+let cadVerInativos = false;
+
 function renderCadastro() {
-  const grid = document.getElementById('pavsGrid');
+  const grid         = document.getElementById('pavsGrid');
+  const gridInativos = document.getElementById('pavsGridInativos');
+  const secInativos  = document.getElementById('inativosSection');
   grid.innerHTML = '';
+  gridInativos.innerHTML = '';
+
   const sorted = [...state.pavs].sort((a, b) => a['Nome Completo'].localeCompare(b['Nome Completo']));
-  sorted.forEach(pav => {
-    const card = document.createElement('div');
-    card.className = 'pav-card';
-    const statusClass = pav.Status === 'Ativo' ? 'ativo' : 'inativo';
-    card.innerHTML = `
-      <div class="pav-card-top">
-        <div>
-          <div class="pav-card-name">${pav['Nome Completo']}</div>
-          <div style="margin-top:4px">
-            <span class="fin-base-badge ${pav.Base.toLowerCase()}">${pav.Base}</span>
-          </div>
-        </div>
-        <span class="pav-card-status ${statusClass}">${pav.Status}</span>
-      </div>
-      <div class="pav-card-info">
-        📞 ${pav.Telefone || '—'}<br>
-        ✉️ ${pav.Email || '—'}<br>
-        🪪 ${pav.CPF || '—'}
-      </div>
-      <div class="pav-card-actions">
-        <button class="btn-sm" onclick="editarPAV('${pav.ID}')">Editar</button>
-        <button class="btn-sm danger" onclick="inativarPAV('${pav.ID}')">
-          ${pav.Status === 'Ativo' ? 'Inativar' : 'Reativar'}
-        </button>
-      </div>
-    `;
-    grid.appendChild(card);
-  });
+  const ativos   = sorted.filter(p => p.Status === 'Ativo'   && (cadFiltroBase === 'todos' || p.Base === cadFiltroBase));
+  const inativos = sorted.filter(p => p.Status === 'Inativo' && (cadFiltroBase === 'todos' || p.Base === cadFiltroBase));
+
+  ativos.forEach(pav => grid.appendChild(criarCardPAV(pav)));
+
+  if (cadVerInativos) {
+    secInativos.style.display = inativos.length ? '' : 'none';
+    inativos.forEach(pav => gridInativos.appendChild(criarCardPAV(pav)));
+  } else {
+    secInativos.style.display = 'none';
+  }
+
+  document.getElementById('btnVerInativos').textContent =
+    cadVerInativos ? '🙈 Ocultar inativos' : `👁 Ver inativos (${inativos.length})`;
 }
+
+function criarCardPAV(pav) {
+  const card = document.createElement('div');
+  card.className = 'pav-card';
+  const statusClass = pav.Status === 'Ativo' ? 'ativo' : 'inativo';
+  card.innerHTML = `
+    <div class="pav-card-top">
+      <div>
+        <div class="pav-card-name">${pav['Nome Completo']}</div>
+        <div style="margin-top:4px">
+          <span class="fin-base-badge ${pav.Base.toLowerCase()}">${pav.Base}</span>
+        </div>
+      </div>
+      <span class="pav-card-status ${statusClass}">${pav.Status}</span>
+    </div>
+    <div class="pav-card-info">
+      📞 ${pav.Telefone || '—'}<br>
+      ✉️ ${pav.Email || '—'}<br>
+      🪪 ${pav.CPF || '—'}
+    </div>
+    <div class="pav-card-actions">
+      <button class="btn-sm" onclick="editarPAV('${pav.ID}')">Editar</button>
+      <button class="btn-sm danger" onclick="inativarPAV('${pav.ID}')">
+        ${pav.Status === 'Ativo' ? 'Inativar' : 'Reativar'}
+      </button>
+    </div>
+  `;
+  return card;
+}
+
+// Filtros base
+document.querySelectorAll('[data-base]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('[data-base]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    cadFiltroBase = btn.dataset.base;
+    renderCadastro();
+  });
+});
+
+document.getElementById('btnVerInativos')?.addEventListener('click', () => {
+  cadVerInativos = !cadVerInativos;
+  renderCadastro();
+});
 
 document.getElementById('btnNovoPAV')?.addEventListener('click', () => {
   document.getElementById('pavFormID').value = '';
