@@ -655,6 +655,17 @@ body.dark select.field-input{background-image:url("data:image/svg+xml,%3Csvg xml
       <button class="tab-btn active" data-view="viewCalendario" id="tabCal">📅 Calendário</button>
       <button class="tab-btn" data-view="viewFinanceiro" id="tabFin">💰 Financeiro</button>
       <button class="tab-btn admin-only" data-view="viewCadastro" id="tabCad">👥 PAVs</button>
+      <a href="https://empresas-app.ifood.com.br/auth/login" target="_blank" id="ifoodBtn"
+        style="display:none;align-items:center;gap:7px;
+               background:#EA1D2C;color:#fff;
+               border-radius:8px;padding:7px 13px;
+               font-family:var(--font-body);font-size:12px;font-weight:600;
+               text-decoration:none;border:none;
+               box-shadow:0 2px 8px rgba(234,29,44,0.3);
+               transition:opacity 0.2s,transform 0.1s;">
+        <img src="data:image/png;base64,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" alt="iFood" style="width:18px;height:18px;object-fit:contain"/>
+        iFood Benefícios
+      </a>
       <button class="btn-theme" id="btnTheme" title="Alternar tema">☀️</button>
       <button class="btn-logout" id="btnLogout">Sair</button>
     </div>
@@ -731,20 +742,6 @@ body.dark select.field-input{background-image:url("data:image/svg+xml,%3Csvg xml
       </table>
     </div>
 
-    <!-- Botão iFood Benefícios — só para financeiro -->
-    <div id="ifoodBtnWrap" style="display:none;margin-top:40px;padding-top:32px;border-top:1px solid var(--border);justify-content:center">
-      <a href="https://empresas-app.ifood.com.br/auth/login" target="_blank" id="ifoodBtn"
-        style="display:inline-flex;align-items:center;gap:14px;
-               background:#EA1D2C;color:#fff;
-               border-radius:14px;padding:16px 32px;
-               font-family:var(--font-head);font-size:16px;font-weight:700;
-               text-decoration:none;letter-spacing:0.2px;
-               box-shadow:0 4px 20px rgba(234,29,44,0.35);
-               transition:opacity 0.2s,transform 0.15s;">
-        <img src="data:image/png;base64,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" alt="iFood Benefícios" style="width:40px;height:40px;object-fit:contain"/>
-        Acessar iFood Benefícios
-      </a>
-    </div>
   </div>
 
   <!-- ── VIEW: CADASTRO PAV ── -->
@@ -1020,13 +1017,11 @@ async function entrarNoApp() {
     document.getElementById('tabFin').classList.add('active');
     setActiveView('viewFinanceiro');
     // Mostrar botão iFood
-    const wrap = document.getElementById('ifoodBtnWrap');
-    if (wrap) wrap.style.display = 'flex';
-    // Hover no botão iFood
     const btn = document.getElementById('ifoodBtn');
     if (btn) {
-      btn.addEventListener('mouseover', () => { btn.style.opacity='0.9'; btn.style.transform='translateY(-2px)'; });
-      btn.addEventListener('mouseout',  () => { btn.style.opacity='1';   btn.style.transform='translateY(0)'; });
+      btn.style.display = 'inline-flex';
+      btn.addEventListener('mouseover', () => { btn.style.opacity='0.88'; btn.style.transform='scale(0.97)'; });
+      btn.addEventListener('mouseout',  () => { btn.style.opacity='1';    btn.style.transform='scale(1)'; });
     }
   } else {
     setActiveView('viewCalendario');
