@@ -1427,7 +1427,8 @@ function populateFinMes() {
 async function carregarFinanceiro() {
   const mes = document.getElementById('finMesSelect').value;
   const res = await api('getFinanceiro', { mes });
-  if (!res.ok) return;
+  console.log('getFinanceiro resposta:', JSON.stringify(res));
+  if (!res.ok) { toast('Erro ao carregar financeiro: ' + (res.msg||''), 'error'); return; }
 
   document.getElementById('finTotalPavs').textContent = res.resultado.length;
   const totalDias = res.resultado.reduce((s, r) => s + r.dias, 0);
@@ -1454,7 +1455,7 @@ async function carregarFinanceiro() {
 
 // ─── CADASTRO PAV ─────────────────────────────────────────────
 let cadFiltroBase = 'todos';
-let cadVerInativos = false;
+let cadVerInativos = false; // inativos ocultos por padrão
 
 function renderCadastro() {
   const grid         = document.getElementById('pavsGrid');
@@ -1476,8 +1477,8 @@ function renderCadastro() {
     secInativos.style.display = 'none';
   }
 
-  document.getElementById('btnVerInativos').textContent =
-    cadVerInativos ? '🙈 Ocultar inativos' : `👁 Ver inativos (${inativos.length})`;
+  const btnVI = document.getElementById('btnVerInativos');
+  if (btnVI) btnVI.textContent = cadVerInativos ? '🙈 Ocultar inativos' : `👁 Inativos (${inativos.length})`;
 }
 
 function criarCardPAV(pav) {
@@ -1510,9 +1511,13 @@ function criarCardPAV(pav) {
 }
 
 // Filtros base
-document.querySelectorAll('[data-base]').forEach(btn => {
+['filterTodos','filterCPN','filterSJK'].forEach(id => {
+  const btn = document.getElementById(id);
+  if (!btn) return;
   btn.addEventListener('click', () => {
-    document.querySelectorAll('[data-base]').forEach(b => b.classList.remove('active'));
+    ['filterTodos','filterCPN','filterSJK'].forEach(fid => {
+      document.getElementById(fid)?.classList.remove('active');
+    });
     btn.classList.add('active');
     cadFiltroBase = btn.dataset.base;
     renderCadastro();
