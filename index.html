@@ -552,14 +552,14 @@ body.dark select.field-input{background-image:url("data:image/svg+xml,%3Csvg xml
    RESPONSIVO MOBILE
 ══════════════════════════════════════════ */
 @media (max-width: 768px) {
-  .topbar{padding:0 16px;height:56px}
+  .topbar{padding:0 12px;height:56px;gap:6px}
   .topbar-divider,.topbar-title{display:none}
-  .tab-btn{font-size:11px;padding:6px 10px}
-  .tab-btn span{display:none}
+  .tab-btn{font-size:11px;padding:6px 8px}
+  .topbar-logo-text{font-size:13px}
 
-  #viewCalendario,#viewFinanceiro,#viewCadastro{padding:16px}
+  #viewCalendario,#viewFinanceiro,#viewCadastro{padding:12px}
 
-  .cal-header{gap:10px}
+  .cal-header{gap:8px;flex-direction:column;align-items:flex-start}
   .cal-month-label{font-size:18px;min-width:0}
   .cal-day{min-height:70px;padding:6px}
   .pav-chip{padding:3px 5px}
@@ -567,35 +567,56 @@ body.dark select.field-input{background-image:url("data:image/svg+xml,%3Csvg xml
   .chip-base{font-size:8px}
   .chip-edit{display:none}
   .day-number{font-size:11px}
-
   .cal-weekday{font-size:9px;padding:8px 0}
-  .cal-actions{gap:6px}
+  .cal-actions{gap:6px;flex-wrap:wrap}
   .btn-action{font-size:11px;padding:6px 10px}
+  .cal-legend{display:none}
 
-  .fin-summary{grid-template-columns:1fr 1fr}
-  .fin-card{padding:14px 16px}
-  .fin-card-value{font-size:20px}
-  .fin-table th:nth-child(4),.fin-table td:nth-child(4),
-  .fin-table th:nth-child(5),.fin-table td:nth-child(5){display:none}
+  /* Financeiro mobile */
+  .fin-header{flex-direction:column;align-items:flex-start;gap:8px}
+  .fin-title{font-size:20px}
+  .fin-mes-select{width:100%}
+  .fin-summary{grid-template-columns:1fr 1fr;gap:10px}
+  .fin-card{padding:12px 14px}
+  .fin-card-value{font-size:18px}
+
+  /* Tabela com scroll horizontal */
+  .fin-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .fin-table{min-width:480px}
+  .fin-table th,.fin-table td{padding:10px 12px;font-size:12px}
 
   .pavs-grid{grid-template-columns:1fr}
 
-  .login-box{padding:32px 24px;margin:16px}
+  .login-box{padding:32px 20px;margin:16px}
   .login-title{font-size:22px}
 
-  .modal{padding:24px 20px;margin:16px}
+  .modal{padding:20px 16px;margin:12px}
   .modal-row{grid-template-columns:1fr}
 
-  .toast{bottom:16px;right:16px;left:16px}
+  .toast{bottom:16px;right:12px;left:12px}
+
+  /* Botão iFood menor no mobile */
+  #ifoodBtn{font-size:11px;padding:6px 10px;gap:5px}
+  #ifoodBtn img{width:15px;height:15px}
 }
 
 @media (max-width: 480px) {
-  .tab-btn{padding:5px 8px;font-size:10px}
-  .cal-day{min-height:56px;padding:4px}
+  .topbar{padding:0 10px}
+  .tab-btn{padding:5px 7px;font-size:10px}
+
+  .cal-day{min-height:52px;padding:3px}
   .pav-chip{padding:2px 4px;margin-bottom:2px}
   .chip-name{display:none}
+
   .fin-summary{grid-template-columns:1fr}
-  .fin-table th:nth-child(3),.fin-table td:nth-child(3){display:none}
+  .fin-card-value{font-size:22px}
+
+  /* Tabela financeiro — scroll e compacta */
+  .fin-table{min-width:420px}
+  .fin-table th,.fin-table td{padding:8px 10px;font-size:11px}
+  .fin-valor{font-size:12px}
+
+  .btn-action{font-size:10px;padding:5px 8px}
 }
 </style>
 </head>
@@ -1176,7 +1197,7 @@ function criarChip(base, id, nome, dataStr) {
 
   chip.innerHTML = `
     <span class="chip-base">${base}</span>
-    <span class="chip-name">${nome.split(' ')[0]}</span>
+    <span class="chip-name">${nome}</span>
     ${state.perfil === 'admin' ? '<button class="chip-edit" title="Editar">✎</button>' : ''}
   `;
 
@@ -1660,6 +1681,15 @@ document.getElementById('pavCPF').addEventListener('input', function() {
 });
 document.getElementById('pavTel').addEventListener('input', function() {
   this.value = mascaraTel(this.value);
+});
+
+// ─── AVISO AO FECHAR COM ALTERAÇÕES NÃO SALVAS ──────────────
+window.addEventListener('beforeunload', function(e) {
+  if (Object.keys(state.escalaEditada).length > 0) {
+    e.preventDefault();
+    e.returnValue = 'Você tem alterações não salvas na escala. Deseja sair mesmo assim?';
+    return e.returnValue;
+  }
 });
 
 // Fechar modais clicando fora
