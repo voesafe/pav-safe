@@ -1019,7 +1019,7 @@ async function entrarNoApp() {
 
   // Financeiro entra direto na aba financeiro
   if (state.perfil === 'financeiro') {
-    document.querySelectorAll('.tab-btn[data-view]').forEach(b => b.classList.remove('active'));
+    document.getElementById('tabCal').classList.remove('active');
     document.getElementById('tabFin').classList.add('active');
     setActiveView('viewFinanceiro');
     // Mostrar botão iFood
