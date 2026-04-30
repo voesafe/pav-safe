@@ -503,6 +503,78 @@ body.dark .fin-base-badge.sjk{background:rgba(96,192,191,0.25);color:#a0dede}
 }
 .btn-confirm:hover{opacity:0.9}
 
+/* Zona de perigo */
+.danger-zone{
+  margin:32px 24px 24px;
+  border:1px solid rgba(220,53,69,0.25);
+  border-radius:var(--radius);
+  background:rgba(220,53,69,0.04);
+  overflow:hidden;
+}
+.danger-zone-header{
+  display:flex;align-items:center;gap:10px;
+  padding:14px 20px;
+  border-bottom:1px solid rgba(220,53,69,0.15);
+  background:rgba(220,53,69,0.06);
+}
+.danger-zone-icon{font-size:16px}
+.danger-zone-title{
+  font-family:var(--font-head);font-size:13px;font-weight:700;
+  color:#dc3545;letter-spacing:0.3px;text-transform:uppercase;
+}
+.danger-zone-desc{
+  font-size:12px;color:var(--muted);margin-left:auto;
+}
+.danger-zone-actions{padding:16px 20px;display:flex;flex-direction:column;gap:12px}
+.danger-action-item{
+  display:flex;align-items:center;gap:16px;justify-content:space-between;
+}
+.danger-action-info{display:flex;flex-direction:column;gap:4px}
+.danger-action-name{font-size:14px;font-weight:600;color:var(--text)}
+.danger-action-desc{font-size:12px;color:var(--muted);max-width:520px}
+.btn-danger{
+  flex-shrink:0;
+  background:transparent;border:1px solid rgba(220,53,69,0.5);
+  border-radius:var(--radius-sm);color:#dc3545;
+  font-family:var(--font-head);font-size:13px;font-weight:700;
+  padding:8px 20px;cursor:pointer;transition:all 0.2s;white-space:nowrap;
+}
+.btn-danger:hover{background:rgba(220,53,69,0.08);border-color:#dc3545}
+
+/* Modal confirmação replicar */
+.modal-confirm{
+  background:var(--modal-bg);border:1px solid var(--border);
+  border-radius:var(--radius);padding:36px 32px;
+  width:100%;max-width:460px;
+  box-shadow:var(--shadow);
+  animation:fadeUp 0.25s ease both;
+  text-align:center;
+}
+.modal-confirm-icon{font-size:40px;margin-bottom:12px}
+.modal-confirm-title{
+  font-family:var(--font-head);font-size:20px;font-weight:800;
+  margin-bottom:12px;letter-spacing:-0.3px;
+}
+.modal-confirm-desc{
+  font-size:14px;color:var(--muted);line-height:1.6;margin-bottom:28px;
+}
+.modal-confirm-desc strong{color:var(--text)}
+.modal-confirm-actions{display:flex;gap:12px;justify-content:center}
+.btn-modal-cancel{
+  flex:1;background:transparent;border:1px solid var(--border);
+  border-radius:var(--radius-sm);color:var(--muted);
+  font-family:var(--font-body);font-size:14px;padding:12px;
+  cursor:pointer;transition:all 0.2s;max-width:160px;
+}
+.btn-modal-cancel:hover{color:var(--text);border-color:var(--text)}
+.btn-modal-confirm{
+  flex:1;background:#dc3545;border:none;
+  border-radius:var(--radius-sm);color:#fff;
+  font-family:var(--font-head);font-size:14px;font-weight:700;
+  padding:12px;cursor:pointer;transition:opacity 0.2s;max-width:160px;
+}
+.btn-modal-confirm:hover{opacity:0.88}
+
 /* Modal escalar por dia da semana */
 .weekday-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin:16px 0}
 .wd-btn{
@@ -711,7 +783,6 @@ body.dark select.field-input{background-image:url("data:image/svg+xml,%3Csvg xml
           <div class="legend-item"><div class="legend-dot sjk"></div>SJK</div>
         </div>
         <div class="cal-actions admin-only">
-          <button class="btn-action" id="btnReplicarMes" title="Copia o padrão semanal do mês anterior">📋 Replicar mês anterior</button>
           <button class="btn-action" id="btnEscalarSemana">⚡ Escalar por dia da semana</button>
           <button class="btn-action primary" id="btnSalvarEscala">💾 Salvar escala</button>
         </div>
@@ -728,6 +799,40 @@ body.dark select.field-input{background-image:url("data:image/svg+xml,%3Csvg xml
         <div class="cal-weekday">Sáb</div>
       </div>
       <div class="cal-days" id="calDays"></div>
+    </div>
+
+    <!-- ── ZONA DE PERIGO ── -->
+    <div class="danger-zone admin-only" id="dangerZone">
+      <div class="danger-zone-header">
+        <span class="danger-zone-icon">⚠️</span>
+        <span class="danger-zone-title">Ações críticas</span>
+        <span class="danger-zone-desc">Operações que substituem dados existentes na escala</span>
+      </div>
+      <div class="danger-zone-actions">
+        <div class="danger-action-item">
+          <div class="danger-action-info">
+            <span class="danger-action-name">📋 Replicar mês anterior</span>
+            <span class="danger-action-desc">Copia o padrão semanal do mês anterior para o mês atual. Dados já preenchidos serão substituídos.</span>
+          </div>
+          <button class="btn-danger" id="btnReplicarMes">Executar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── MODAL CONFIRMAÇÃO REPLICAR ── -->
+  <div class="modal-overlay" id="modalReplicarOverlay">
+    <div class="modal-confirm">
+      <div class="modal-confirm-icon">📋</div>
+      <div class="modal-confirm-title">Replicar mês anterior?</div>
+      <div class="modal-confirm-desc">
+        Esta ação vai copiar o padrão semanal do mês anterior para <strong id="modalReplicarMesNome"></strong>.<br><br>
+        Todos os dias já preenchidos no mês atual serão <strong>substituídos</strong>. Esta operação não pode ser desfeita automaticamente.
+      </div>
+      <div class="modal-confirm-actions">
+        <button class="btn-modal-cancel" id="btnReplicarCancelar">Cancelar</button>
+        <button class="btn-modal-confirm" id="btnReplicarConfirmar">Sim, replicar</button>
+      </div>
     </div>
   </div>
 
@@ -1268,7 +1373,20 @@ function moverPAV(payload, toData) {
 }
 
 // REPLICAR MÊS ANTERIOR
+// REPLICAR MÊS — abre modal de confirmação
 document.getElementById('btnReplicarMes')?.addEventListener('click', () => {
+  const mesNome = state.mesAtual.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+  document.getElementById('modalReplicarMesNome').textContent = mesNome;
+  document.getElementById('modalReplicarOverlay').classList.add('open');
+});
+
+document.getElementById('btnReplicarCancelar')?.addEventListener('click', () => {
+  document.getElementById('modalReplicarOverlay').classList.remove('open');
+});
+
+document.getElementById('btnReplicarConfirmar')?.addEventListener('click', () => {
+  document.getElementById('modalReplicarOverlay').classList.remove('open');
+
   const mesAtual = state.mesAtual;
   const anoAtual = mesAtual.getFullYear();
   const mesIdx   = mesAtual.getMonth();
@@ -1282,7 +1400,6 @@ document.getElementById('btnReplicarMes')?.addEventListener('click', () => {
   Object.entries({...state.escala, ...state.escalaEditada}).forEach(([data, v]) => {
     if (data.startsWith(mesAntStr)) {
       const dow = new Date(data + 'T12:00:00').getDay();
-      // Guarda o último valor para cada dia da semana
       escalaMesAnt[dow] = v;
     }
   });
