@@ -1469,12 +1469,15 @@ function populateFinMes() {
   const sel = document.getElementById('finMesSelect');
   sel.innerHTML = '';
   const hoje = new Date();
-  for (let i = 0; i < 12; i++) {
+  // Começa 2 meses à frente para cobrir meses futuros com escala já populada
+  for (let i = -2; i < 12; i++) {
     const d = new Date(hoje.getFullYear(), hoje.getMonth() - i, 1);
     const val = mesStr(d);
     const label = d.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
     sel.innerHTML += `<option value="${val}">${label}</option>`;
   }
+  // Seleciona o mês atual como padrão (índice 2, pois começamos 2 à frente)
+  sel.selectedIndex = 2;
   sel.addEventListener('change', carregarFinanceiro);
 }
 
