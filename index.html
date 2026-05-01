@@ -1162,7 +1162,16 @@ async function entrarNoApp() {
       btn.addEventListener('mouseout',  () => { btn.style.opacity='1';    btn.style.transform='scale(1)'; });
     }
   } else {
-    setActiveView('viewCalendario');
+    const savedView = localStorage.getItem('pav-last-view') || 'viewCalendario';
+    // Garantir que a view salva existe e o perfil tem acesso
+    const viewValida = ['viewCalendario', 'viewFinanceiro', 'viewCadastro'].includes(savedView);
+    const viewPermitida = savedView !== 'viewCadastro' || state.perfil === 'admin';
+    const viewFinal = (viewValida && viewPermitida) ? savedView : 'viewCalendario';
+    // Atualizar tab ativa visualmente
+    document.querySelectorAll('.tab-btn[data-view]').forEach(b => {
+      b.classList.toggle('active', b.dataset.view === viewFinal);
+    });
+    setActiveView(viewFinal);
   }
 }
 
@@ -1172,6 +1181,7 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
     if (!btn.dataset.view) return; // ignorar filtros de base
     document.querySelectorAll('.tab-btn[data-view]').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
+    localStorage.setItem('pav-last-view', btn.dataset.view);
     setActiveView(btn.dataset.view);
   });
 });
