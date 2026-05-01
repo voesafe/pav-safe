@@ -840,7 +840,10 @@ body.dark select.field-input{background-image:url("data:image/svg+xml,%3Csvg xml
   <div class="screen" id="viewFinanceiro" style="display:none">
     <div class="fin-header">
       <div class="fin-title">Fechamento Financeiro</div>
-      <select class="fin-mes-select" id="finMesSelect"></select>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <select class="fin-mes-select" id="finMesSelect"></select>
+        <button class="btn-action" id="btnExportarIfood" style="display:none;white-space:nowrap">📥 Exportar iFood</button>
+      </div>
     </div>
     <div class="fin-summary">
       <div class="fin-card">
@@ -969,9 +972,13 @@ body.dark select.field-input{background-image:url("data:image/svg+xml,%3Csvg xml
         <input class="field-input" id="pavCPF" type="text" placeholder="000.000.000-00"/>
       </div>
       <div class="field-group">
-        <div class="field-label">Telefone</div>
-        <input class="field-input" id="pavTel" type="text" placeholder="(00) 00000-0000"/>
+        <div class="field-label">Data de Nascimento</div>
+        <input class="field-input" id="pavNascimento" type="text" placeholder="dd/mm/aaaa"/>
       </div>
+    </div>
+    <div class="field-group">
+      <div class="field-label">Telefone</div>
+      <input class="field-input" id="pavTel" type="text" placeholder="(00) 00000-0000"/>
     </div>
     <div class="field-group">
       <div class="field-label">Email</div>
@@ -1604,6 +1611,10 @@ async function carregarFinanceiro() {
   console.log('getFinanceiro resposta:', JSON.stringify(res));
   if (!res.ok) { toast('Erro ao carregar financeiro: ' + (res.msg||''), 'error'); return; }
 
+  // Guardar resultado globalmente para exportação
+  window._finResultado = res.resultado;
+  mostrarBtnExportar();
+
   document.getElementById('finTotalPavs').textContent = res.resultado.length;
   const totalDias = res.resultado.reduce((s, r) => s + r.dias, 0);
   const totalVal  = res.resultado.reduce((s, r) => s + r.total, 0);
@@ -1706,7 +1717,7 @@ document.getElementById('btnVerInativos')?.addEventListener('click', () => {
 document.getElementById('btnNovoPAV')?.addEventListener('click', () => {
   document.getElementById('pavFormID').value = '';
   document.getElementById('modalPAVTitle').textContent = 'Novo PAV';
-  ['pavNome','pavCPF','pavTel','pavEmail'].forEach(id => document.getElementById(id).value = '');
+  ['pavNome','pavCPF','pavNascimento','pavTel','pavEmail'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('pavBase').value = 'CPN';
   document.getElementById('pavStatus').value = 'Ativo';
   document.getElementById('modalPAV').classList.add('open');
@@ -1717,12 +1728,13 @@ function editarPAV(id) {
   if (!pav) return;
   document.getElementById('pavFormID').value = pav.ID;
   document.getElementById('modalPAVTitle').textContent = 'Editar PAV';
-  document.getElementById('pavNome').value   = pav['Nome Completo'] || '';
-  document.getElementById('pavCPF').value    = pav.CPF || '';
-  document.getElementById('pavTel').value    = pav.Telefone || '';
-  document.getElementById('pavEmail').value  = pav.Email || '';
-  document.getElementById('pavBase').value   = pav.Base || 'CPN';
-  document.getElementById('pavStatus').value = pav.Status || 'Ativo';
+  document.getElementById('pavNome').value        = pav['Nome Completo'] || '';
+  document.getElementById('pavCPF').value         = pav.CPF || '';
+  document.getElementById('pavNascimento').value  = pav['Data Nascimento'] || '';
+  document.getElementById('pavTel').value         = pav.Telefone || '';
+  document.getElementById('pavEmail').value       = pav.Email || '';
+  document.getElementById('pavBase').value        = pav.Base || 'CPN';
+  document.getElementById('pavStatus').value      = pav.Status || 'Ativo';
   document.getElementById('modalPAV').classList.add('open');
 }
 
@@ -1745,12 +1757,13 @@ document.getElementById('modalPAVCancel').addEventListener('click', () => {
 document.getElementById('modalPAVConfirm').addEventListener('click', async () => {
   const id   = document.getElementById('pavFormID').value;
   const body = {
-    'Nome Completo': document.getElementById('pavNome').value.trim(),
-    CPF:       document.getElementById('pavCPF').value.trim(),
-    Telefone:  document.getElementById('pavTel').value.trim(),
-    Email:     document.getElementById('pavEmail').value.trim(),
-    Base:      document.getElementById('pavBase').value,
-    Status:    document.getElementById('pavStatus').value,
+    'Nome Completo':   document.getElementById('pavNome').value.trim(),
+    CPF:               document.getElementById('pavCPF').value.trim(),
+    'Data Nascimento': document.getElementById('pavNascimento').value.trim(),
+    Telefone:          document.getElementById('pavTel').value.trim(),
+    Email:             document.getElementById('pavEmail').value.trim(),
+    Base:              document.getElementById('pavBase').value,
+    Status:            document.getElementById('pavStatus').value,
   };
   if (id) body.ID = id;
 
@@ -1806,6 +1819,83 @@ document.getElementById('pavCPF').addEventListener('input', function() {
 });
 document.getElementById('pavTel').addEventListener('input', function() {
   this.value = mascaraTel(this.value);
+});
+document.getElementById('pavNascimento').addEventListener('input', function() {
+  let v = this.value.replace(/\D/g,'').slice(0,8);
+  if (v.length > 4) v = v.replace(/(\d{2})(\d{2})(\d{1,4})/,'$1/$2/$3');
+  else if (v.length > 2) v = v.replace(/(\d{2})(\d{1,2})/,'$1/$2');
+  this.value = v;
+});
+
+// ─── EXPORTAR IFOOD ──────────────────────────────────────────
+function mostrarBtnExportar() {
+  const perfil = state.perfil;
+  const btn = document.getElementById('btnExportarIfood');
+  if (btn && (perfil === 'financeiro' || perfil === 'admin')) {
+    btn.style.display = 'inline-flex';
+  }
+}
+
+document.getElementById('btnExportarIfood')?.addEventListener('click', () => {
+  if (!window._finResultado || window._finResultado.length === 0) {
+    toast('Nenhum dado financeiro para exportar', 'error'); return;
+  }
+
+  const CNPJ_FIXO = '29.952.771/0001-60';
+  const headers = [
+    'CNPJ (obrigatório)',
+    'Nome (obrigatório)',
+    'CPF (obrigatório)',
+    'Data de nascimento (obrigatório)',
+    'Email (opcional)',
+    'Celular (opcional)',
+    'Centro de custo (opcional)',
+    'Convenção Coletiva (opcional)',
+    'Grupo de entrega (opcional)',
+    'Matricula (opcional)',
+    'Filtro para relatorio de recarga (opcional)',
+    'Refeição (Aderente ao PAT) (opcional)',
+    'Alimentação (Aderente ao PAT) (opcional)',
+    'Mobilidade (opcional)',
+    'Livre (opcional)'
+  ];
+
+  const rows = window._finResultado.map(r => {
+    // Converter data nascimento de dd/mm/aaaa para dd/mm/aaaa (já está no formato certo)
+    const nasc = r.nascimento || '';
+    const total = (r.total || 0).toFixed(2).replace('.', ',');
+    return [
+      CNPJ_FIXO,
+      r.nome || '',
+      r.cpf  || '',
+      nasc,
+      r.email || '',
+      r.tel   || '',
+      '',  // Centro de custo
+      '',  // Convenção Coletiva
+      '',  // Grupo de entrega
+      '',  // Matricula
+      '',  // Filtro recarga
+      total, // Refeição = valor do mês
+      '',  // Alimentação
+      '',  // Mobilidade
+      ''   // Livre
+    ];
+  });
+
+  const csvContent = [headers, ...rows]
+    .map(row => row.map(c => `"${String(c).replace(/"/g,'""')}"`).join('\t'))
+    .join('\n');
+
+  const mesLabel = document.getElementById('finMesSelect').selectedOptions[0]?.text || 'exportacao';
+  const filename = `ifood_${mesLabel.replace(/\s/g,'_')}.xls`;
+
+  const blob = new Blob(['\uFEFF' + csvContent], { type: 'application/vnd.ms-excel;charset=utf-8' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url; a.download = filename; a.click();
+  URL.revokeObjectURL(url);
+  toast('Planilha exportada com sucesso!', 'success');
 });
 
 // ─── AVISO AO FECHAR COM ALTERAÇÕES NÃO SALVAS ──────────────
