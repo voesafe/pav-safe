@@ -1841,62 +1841,81 @@ document.getElementById('btnExportarIfood')?.addEventListener('click', () => {
     toast('Nenhum dado financeiro para exportar', 'error'); return;
   }
 
+  // Carregar SheetJS para gerar .xlsx real igual ao modelo iFood
+  if (typeof XLSX === 'undefined') {
+    const script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
+    script.onload = () => gerarXlsxIfood();
+    document.head.appendChild(script);
+  } else {
+    gerarXlsxIfood();
+  }
+});
+
+function gerarXlsxIfood() {
   const CNPJ_FIXO = '29.952.771/0001-60';
+
+  // Cabeçalhos exatamente como no modelo iFood (com quebra de linha)
   const headers = [
-    'CNPJ (obrigatório)',
-    'Nome (obrigatório)',
-    'CPF (obrigatório)',
-    'Data de nascimento (obrigatório)',
-    'Email (opcional)',
-    'Celular (opcional)',
-    'Centro de custo (opcional)',
-    'Convenção Coletiva (opcional)',
-    'Grupo de entrega (opcional)',
-    'Matricula (opcional)',
-    'Filtro para relatorio de recarga (opcional)',
-    'Refeição (Aderente ao PAT) (opcional)',
-    'Alimentação (Aderente ao PAT) (opcional)',
-    'Mobilidade (opcional)',
-    'Livre (opcional)'
+    'CNPJ\n(obrigatório)',
+    'Nome\n(obrigatório)',
+    'CPF\n(obrigatório)',
+    'Data de nascimento\n(obrigatório)',
+    'Email\n(opcional)',
+    'Celular\n(opcional)',
+    'Centro de custo\n(opcional)',
+    'Convenção Coletiva\n(opcional)',
+    'Grupo de entrega\n(opcional)',
+    'Matricula\n(opcional)',
+    'Filtro para relatorio de recarga\n(opcional)',
+    'Refeição (Aderente ao PAT)\n(opcional)',
+    'Alimentação (Aderente ao PAT)\n(opcional)',
+    'Mobilidade\n(opcional)',
+    'Livre\n(opcional)'
   ];
 
-  const rows = window._finResultado.map(r => {
-    // Converter data nascimento de dd/mm/aaaa para dd/mm/aaaa (já está no formato certo)
-    const nasc = r.nascimento || '';
-    const total = (r.total || 0).toFixed(2).replace('.', ',');
-    return [
-      CNPJ_FIXO,
-      r.nome || '',
-      r.cpf  || '',
-      nasc,
-      r.email || '',
-      r.tel   || '',
-      '',  // Centro de custo
-      '',  // Convenção Coletiva
-      '',  // Grupo de entrega
-      '',  // Matricula
-      '',  // Filtro recarga
-      total, // Refeição = valor do mês
-      '',  // Alimentação
-      '',  // Mobilidade
-      ''   // Livre
-    ];
+  const dataRows = window._finResultado.map(r => [
+    CNPJ_FIXO,
+    r.nome  || '',
+    r.cpf   || '',
+    r.nascimento || '',
+    r.email || '',
+    r.tel   || '',
+    '', // Centro de custo
+    '', // Convenção Coletiva
+    '', // Grupo de entrega
+    '', // Matricula
+    '', // Filtro recarga
+    r.total || 0, // Refeição = valor do mês (número)
+    '', // Alimentação
+    '', // Mobilidade
+    ''  // Livre
+  ]);
+
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet([headers, ...dataRows]);
+
+  // Largura das colunas
+  ws['!cols'] = [
+    {wch:22},{wch:35},{wch:16},{wch:20},{wch:30},
+    {wch:18},{wch:18},{wch:18},{wch:18},{wch:14},
+    {wch:24},{wch:20},{wch:20},{wch:14},{wch:14}
+  ];
+
+  // Wrap text no cabeçalho
+  headers.forEach((_, i) => {
+    const cell = ws[XLSX.utils.encode_cell({r:0, c:i})];
+    if (cell) cell.s = { alignment: { wrapText: true, vertical: 'center' } };
   });
 
-  const csvContent = [headers, ...rows]
-    .map(row => row.map(c => `"${String(c).replace(/"/g,'""')}"`).join('\t'))
-    .join('\n');
+  XLSX.utils.book_append_sheet(wb, ws, 'Planilha Modelo');
 
   const mesLabel = document.getElementById('finMesSelect').selectedOptions[0]?.text || 'exportacao';
-  const filename = `ifood_${mesLabel.replace(/\s/g,'_')}.xls`;
+  const filename = `ifood_${mesLabel.replace(/\s/g,'_')}.xlsx`;
 
-  const blob = new Blob(['\uFEFF' + csvContent], { type: 'application/vnd.ms-excel;charset=utf-8' });
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a');
-  a.href = url; a.download = filename; a.click();
-  URL.revokeObjectURL(url);
+  XLSX.writeFile(wb, filename);
   toast('Planilha exportada com sucesso!', 'success');
-});
+}
 
 // ─── AVISO AO FECHAR COM ALTERAÇÕES NÃO SALVAS ──────────────
 window.addEventListener('beforeunload', function(e) {
