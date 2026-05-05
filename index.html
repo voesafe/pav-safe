@@ -1890,7 +1890,7 @@ function gerarXlsxIfood() {
     r.cpf   || '',
     r.nascimento || '',
     r.email || '',
-    r.tel   || '',
+    '', // Telefone omitido na exportação iFood (campo opcional que causa erro)
     '', // Centro de custo
     '', // Convenção Coletiva
     '', // Grupo de entrega
